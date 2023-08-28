@@ -12,3 +12,6 @@ node_modules/
 
 # Ignore launch.json file
 launch.json
+
+# Ignore log files
+*.log
