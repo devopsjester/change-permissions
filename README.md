@@ -12,4 +12,7 @@ If you do not have access to *fine grained* tokens, e.g. you are running on GitH
 
 Configure the script by editing `chperm.config.json`. You may put the token in the config file (not recommended) or paste it in at the prompt after running the script.
 
+You can set the original and desired permissions to either `pull`, `push`, or `admin`.
+
 To run the script, run `python chperm.py` from the command line. 
+
