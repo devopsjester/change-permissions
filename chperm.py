@@ -1,8 +1,11 @@
-import argparse
-import requests
+import json
 import logging
+import requests
+import getpass
 
-logging.basicConfig(filename='chperm.log', level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s')
+def get_access_token():
+    token = getpass.getpass(prompt="Enter your access token: ")
+    return token
 
 def get_owner_type(owner, token):
     url = f"https://api.github.com/users/{owner}"
@@ -55,13 +58,13 @@ def get_repo_admins(owner, repo, token):
         logging.error(f"Error: {response.status_code}")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Get the admins for all repos of a GitHub owner')
-    parser.add_argument('owner', type=str, help='the GitHub owner')
-    parser.add_argument('token', type=str, help='the personal access token for GitHub API authentication')
-    args = parser.parse_args()
+    with open("chperm.config.json", "r") as f:
+        config = json.load(f)
 
-    token = args.token
-    owner = args.owner
+    owner = config["owner"]
+    token = config["token"]
+    if not token:
+        token = get_access_token()
     owner_type = get_owner_type(owner, token)
 
     repos = get_github_user_repos(owner, owner_type, token)
