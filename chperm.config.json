@@ -1,9 +1,9 @@
 {
-    "owner": "devopsjester-csa-org",
-    "token": "",
+    "owner": "NAME_OF_ORGANIZATION_OR_USER",
+    "token": "PERSONAL_ACCESS_TOKEN_TO_ORGANIZATION_OR_USER",
     "excluded_users": [
-        "devopsjester"
+        "NAME_OF_USER_TO_EXCLUDE_FROM_PERMISSION_CHANGE",
     ],
     "original_permission": "admin",
-    "desired_permission": "pull"
+    "desired_permission": "push"
 }
