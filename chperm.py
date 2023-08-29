@@ -41,7 +41,7 @@ def get_github_user_repos(owner, owner_type, token):
         logging.error(f"Error: {response.status_code}")
 
 
-def get_repo_admins(owner, repo, token):
+def get_repo_users(owner, repo, token, original_permission, excluded_admins):
     url = f"https://api.github.com/repos/{owner}/{repo}/collaborators"
     headers = {"Authorization": f"token {token}"}
     response = requests.get(url, headers=headers)
@@ -50,10 +50,21 @@ def get_repo_admins(owner, repo, token):
         logging.info(f"Found {len(data)} users for {owner}/{repo}")
         admins = []
         for user in data:
-            if user.get("permissions").get("admin"):
+            if user.get("permissions").get("admin") and user.get("login") not in excluded_admins:
                 admins.append(user.get("login"))
                 logging.info(f"Found admin: {user.get('login')}")
         return admins
+    else:
+        logging.error(f"Error: {response.status_code}")
+
+def change_user_permission(owner, repo, username, original_permission, desired_permission, token):
+    url = f"https://api.github.com/repos/{owner}/{repo}/collaborators/{username}"
+    headers = {"Authorization": f"token {token}"}
+    data = {"permission": desired_permission}
+    response = requests.put(url, headers=headers, json=data)
+    if response.status_code == 204:
+        logging.info(f"Changed {username}'s permission from {original_permission} to {desired_permission} in {owner}/{repo}")
+        print(f"Changed {username}'s permission from {original_permission} to {desired_permission} in {owner}/{repo}")
     else:
         logging.error(f"Error: {response.status_code}")
 
@@ -66,9 +77,16 @@ if __name__ == "__main__":
     if not token:
         token = get_access_token()
     owner_type = get_owner_type(owner, token)
+    excluded_users = config["excluded_users"]
+    original_permission = config["original_permission"]
+    desired_permission = config["desired_permission"]
+
 
     repos = get_github_user_repos(owner, owner_type, token)
     for repo in repos:
-        admins = get_repo_admins(owner, repo, token)
-        logging.info(f"The admins for {owner}/{repo} are: {', '.join(admins)}")
-        print(f"The admins for {owner}/{repo} are: {', '.join(admins)}")
+        change_users = get_repo_users(owner, repo, token, original_permission, excluded_users)
+        logging.info(f"The users with {original_permission} rights for {owner}/{repo} are: {', '.join(change_users)}")
+        print(f"The users with {original_permission} rights for {owner}/{repo} are: {', '.join(change_users)}")
+
+        for user in change_users:
+            change_user_permission(owner, repo, user, original_permission, desired_permission, token)

@@ -1,4 +1,9 @@
 {
     "owner": "devopsjester-csa-org",
-    "token": ""
+    "token": "",
+    "excluded_users": [
+        "devopsjester"
+    ],
+    "original_permission": "admin",
+    "desired_permission": "pull"
 }
