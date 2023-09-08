@@ -1,9 +1,10 @@
 {
     "owner": "NAME_OF_ORGANIZATION_OR_USER",
-    "token": "PERSONAL_ACCESS_TOKEN_TO_ORGANIZATION_OR_USER",
     "excluded_users": [
-        "NAME_OF_USER_TO_EXCLUDE_FROM_PERMISSION_CHANGE",
+        "NAME_OF_USER_TO_EXCLUDE_FROM_PERMISSION_CHANGE"
     ],
-    "original_permission": "admin",
-    "desired_permission": "push"
+    "original_repo_permission": "admin",
+    "desired_repo_permission": "push",
+    "original_org_permission": "admin",
+    "desired_org_permission": "member"
 }
