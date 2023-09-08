@@ -104,27 +104,25 @@ def change_repo_users_permissions(get_github_user_repos, get_repo_users, change_
 
 
 def change_org_users_permissions(owner, owner_type, excluded_users, original_permission, desired_permission, token):
-    if owner_type != "Organization":
+    if owner_type != "orgs":
         logging.error(f"{owner} is not an organization")
         return
 
     # get the list of members of the organization
     members_url = f"https://api.github.com/orgs/{owner}/members"
-    members_response = requests.get(members_url, headers={"Authorization": f"token {token}"})
-    members_response.raise_for_status()
-    members = members_response.json()
+    data = requests.get(members_url, headers={"Authorization": f"token {token}"})
+    data.raise_for_status()
+    members = data.json()
     logging.info(f"Found {len(members)} members for {owner}")
-
-    # Filter out the excluded users and users who don't have the original permissions
-    members = [
-        member 
-        for member in members 
-        if member.get("login") not in excluded_users 
-        and member.get("permissions").get(original_permission)
-    ]
 
     # Change the permissions for each member
     for member in members:
+        if member.get("login") in excluded_users:
+            continue
+        if member.get("site_admin") and original_permission == "member":
+            continue
+        if not member.get("site_admin") and original_permission == "admin":
+            continue
         member_login = member.get("login")
         member_url = f"https://api.github.com/orgs/{owner}/memberships/{member_login}"
         member_data = {"role": desired_permission}
@@ -159,7 +157,7 @@ if __name__ == "__main__":
 
     logging.info(f"Starting chperm.py for {owner}")    
 
-    # get resource type (--org or --repos) from command line
+    # get resource type (--org or --repos) from command line, or initialize the config file
     parser = argparse.ArgumentParser()
     parser.add_argument("--org", help="Change permissions for all repos in an organization", action="store_true")
     parser.add_argument("--repos", help="Change permissions for a list of repos", action="store_true")
@@ -171,12 +169,12 @@ if __name__ == "__main__":
         exit(0)
 
     if args.repos and not args.org:
-        original_permission = config["original_org_permission"]
-        desired_permission = config["desired_org_permission"]
-        change_repo_users_permissions(get_github_user_repos, get_repo_users, change_user_permission, owner, token, owner_type, excluded_users, original_permission, desired_permission)
-    elif args.org and not args.repos:
         original_permission = config["original_repo_permission"]
         desired_permission = config["desired_repo_permission"]
+        change_repo_users_permissions(get_github_user_repos, get_repo_users, change_user_permission, owner, token, owner_type, excluded_users, original_permission, desired_permission)
+    elif args.org and not args.repos:
+        original_permission = config["original_org_permission"]
+        desired_permission = config["desired_org_permission"]
         change_org_users_permissions(owner, owner_type, excluded_users, original_permission, desired_permission, token)
     else:
         logging.error("Please specify either --org or --repos")
