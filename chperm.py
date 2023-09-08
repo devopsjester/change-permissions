@@ -13,13 +13,6 @@ def get_access_token():
         logging.info("Found access token in environment variable")
         return token
 
-    # get the access token from a file
-    with open("access_token.txt", "r") as f:
-        token = f.read().strip()
-    if token:
-        logging.info("Found access token in file")
-        return token
-
     # get the access token from user input
     token = getpass.getpass(prompt="Enter your GitHub access token: ")
     if token:

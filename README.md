@@ -1,18 +1,51 @@
 # change-permissions
+## (chprem)
 
-Takes the name of an `owner` (organization or user), iterates through all of the repositories, finds all of the users in each repository, and if they have a specified `source permission`, change it to the `target permission`.
+`chperm` is a command-line tool that allows you to change the permissions of members in a GitHub organization or a list of repositories. You can use it to set the role of members from `admin` or `member` in an organization, or set it as `admin`, `triage`, `maintain`, `pull`, or `push` in a repository.
 
-## Instructions
+## Usage
 
-In order to use this script, you must first set up a personal access token that has access to the owner of the repos (organization or user). Set up a *fine-grained* token (now available in public beta), it should be set with the following permissions:
-- Organization permissions: **READ** access to members, **READ/WRITE** access to organization administration
+### Initialize config file
+Before using `chperm`, you need to create a config file by running:
+```
+python chperm.py --init
+```
+
+This will create a `chperm.config.json` file in the current directory with the following default values:
+```
+{
+    "owner": "your_github_username_or_organization_name",
+    "excluded_users": ["user1", "user2"],
+    "original_org_permission": "admin",
+    "desired_org_permission": "member",
+    "original_repo_permission": "admin",
+    "desired_repo_permission": "push"
+}
+```
+
+You can modify these values to suit your needs.
+
+### Change permissions for an organization
+To change the permissions of members in a GitHub organization, run:
+
+```
+python chprem --org
+```
+
+### Change permissions for an organization's repos
+To change the permissions of members in a GitHub organization's repos, run:
+
+```
+python chprem --repos
+```
+
+## Authentication
+
+`chperm` uses a personal access token to authenticate with the GitHub API. You can create a personal access token by following the instructions [here](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens).
+
+Once you have a personal access token, you must set it as an environment variable called `GITHUB_TOKEN`. Set up a *fine-grained* token (now available in public beta), it should be set with the following permissions:
+- Organization permissions: **READ/WRITE** access to members, **READ/WRITE** access to organization administration
 - Repository permissions: **READ** access to metadata, **READ/WRITE** access to administration and code (content)
 
 If you do not have access to *fine grained* tokens, e.g. you are running on GitHub Enterprise Server (GHES) *before* version 3.10, you will have to use a **GitHub App** to authenticate.
-
-Configure the script by editing `chperm.config.json`. You may put the token in the config file (not recommended) or paste it in at the prompt after running the script.
-
-You can set the original and desired permissions to either `pull`, `push`, or `admin`.
-
-To run the script, run `python chperm.py` from the command line. 
 
