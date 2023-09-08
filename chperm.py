@@ -145,6 +145,17 @@ def create_config_file():
             json.dump(config, f, indent=4)
 
 if __name__ == "__main__":
+    # get resource type (--org or --repos) from command line, or initialize the config file
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--org", help="Change permissions for all repos in an organization", action="store_true")
+    parser.add_argument("--repos", help="Change permissions for a list of repos", action="store_true")
+    parser.add_argument("--init", help="Create a config file", action="store_true")
+    args = parser.parse_args()
+    
+    if args.init:
+        create_config_file()
+        exit(0)
+
     with open("chperm.config.json", "r") as f:
         config = json.load(f)
 
@@ -157,16 +168,6 @@ if __name__ == "__main__":
 
     logging.info(f"Starting chperm.py for {owner}")    
 
-    # get resource type (--org or --repos) from command line, or initialize the config file
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--org", help="Change permissions for all repos in an organization", action="store_true")
-    parser.add_argument("--repos", help="Change permissions for a list of repos", action="store_true")
-    parser.add_argument("--init", help="Create a config file", action="store_true")
-    args = parser.parse_args()
-    
-    if args.init:
-        create_config_file()
-        exit(0)
 
     if args.repos and not args.org:
         original_permission = config["original_repo_permission"]
