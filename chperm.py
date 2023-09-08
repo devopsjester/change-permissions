@@ -1,11 +1,35 @@
+import os
 import json
 import logging
 import requests
 import getpass
+import argparse
+
 
 def get_access_token():
-    token = getpass.getpass(prompt="Enter your access token: ")
-    return token
+    # get the access token from an environment variable
+    token = os.environ.get("GITHUB_TOKEN")
+    if token:
+        logging.info("Found access token in environment variable")
+        return token
+
+    # get the access token from a file
+    with open("access_token.txt", "r") as f:
+        token = f.read().strip()
+    if token:
+        logging.info("Found access token in file")
+        return token
+
+    # get the access token from user input
+    token = getpass.getpass(prompt="Enter your GitHub access token: ")
+    if token:
+        logging.info("Found access token from user input")
+        return token
+
+    # if no access token was found, exit the program
+    logging.error("No access token found")
+    print("No access token found")
+    exit(1)
 
 def get_owner_type(owner, token):
     url = f"https://api.github.com/users/{owner}"
@@ -68,20 +92,7 @@ def change_user_permission(owner, repo, username, original_permission, desired_p
     else:
         logging.error(f"Error: {response.status_code}")
 
-if __name__ == "__main__":
-    with open("chperm.config.json", "r") as f:
-        config = json.load(f)
-
-    owner = config["owner"]
-    token = config["token"]
-    if not token:
-        token = get_access_token()
-    owner_type = get_owner_type(owner, token)
-    excluded_users = config["excluded_users"]
-    original_permission = config["original_permission"]
-    desired_permission = config["desired_permission"]
-
-
+def change_repo_users_permissions(get_github_user_repos, get_repo_users, change_user_permission, owner, token, owner_type, excluded_users, original_permission, desired_permission):
     repos = get_github_user_repos(owner, owner_type, token)
     for repo in repos:
         change_users = get_repo_users(owner, repo, token, original_permission, excluded_users)
@@ -90,3 +101,83 @@ if __name__ == "__main__":
 
         for user in change_users:
             change_user_permission(owner, repo, user, original_permission, desired_permission, token)
+
+
+def change_org_users_permissions(owner, owner_type, excluded_users, original_permission, desired_permission, token):
+    if owner_type != "Organization":
+        logging.error(f"{owner} is not an organization")
+        return
+
+    # get the list of members of the organization
+    members_url = f"https://api.github.com/orgs/{owner}/members"
+    members_response = requests.get(members_url, headers={"Authorization": f"token {token}"})
+    members_response.raise_for_status()
+    members = members_response.json()
+    logging.info(f"Found {len(members)} members for {owner}")
+
+    # Filter out the excluded users and users who don't have the original permissions
+    members = [
+        member 
+        for member in members 
+        if member.get("login") not in excluded_users 
+        and member.get("permissions").get(original_permission)
+    ]
+
+    # Change the permissions for each member
+    for member in members:
+        member_login = member.get("login")
+        member_url = f"https://api.github.com/orgs/{owner}/memberships/{member_login}"
+        member_data = {"role": desired_permission}
+        member_response = requests.put(member_url, headers={"Authorization": f"token {token}"}, json=member_data)
+        member_response.raise_for_status()
+        logging.info(f"Changed {member_login}'s permission from {original_permission} to {desired_permission} in {owner}")
+        print(f"Changed {member_login}'s permission from {original_permission} to {desired_permission} in {owner}")
+
+def create_config_file():
+    if not os.path.exists("chperm.config.json"):
+        config = {
+            "owner": "your_github_username_or_organization_name",
+            "excluded_users": ["user1", "user2"],
+            "original_org_permission": "admin",
+            "desired_org_permission": "member",
+            "original_repo_permission": "admin",
+            "desired_repo_permission": "push"
+        }
+        with open("chperm.config.json", "w") as f:
+            json.dump(config, f, indent=4)
+
+if __name__ == "__main__":
+    with open("chperm.config.json", "r") as f:
+        config = json.load(f)
+
+    logging.basicConfig(filename="chperm.log", level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    
+    owner = config["owner"]
+    token = get_access_token()
+    owner_type = get_owner_type(owner, token)
+    excluded_users = config["excluded_users"]
+
+    logging.info(f"Starting chperm.py for {owner}")    
+
+    # get resource type (--org or --repos) from command line
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--org", help="Change permissions for all repos in an organization", action="store_true")
+    parser.add_argument("--repos", help="Change permissions for a list of repos", action="store_true")
+    parser.add_argument("--init", help="Create a config file", action="store_true")
+    args = parser.parse_args()
+    
+    if args.init:
+        create_config_file()
+        exit(0)
+
+    if args.repos and not args.org:
+        original_permission = config["original_org_permission"]
+        desired_permission = config["desired_org_permission"]
+        change_repo_users_permissions(get_github_user_repos, get_repo_users, change_user_permission, owner, token, owner_type, excluded_users, original_permission, desired_permission)
+    elif args.org and not args.repos:
+        original_permission = config["original_repo_permission"]
+        desired_permission = config["desired_repo_permission"]
+        change_org_users_permissions(owner, owner_type, excluded_users, original_permission, desired_permission, token)
+    else:
+        logging.error("Please specify either --org or --repos")
+        print("Please specify either --org or --repos")
